@@ -1,0 +1,126 @@
+{
+ "properties": {
+  "displayName": "Configure App Services Slots to use private DNS zones",
+  "policyType": "Custom",
+  "mode": "Indexed",
+  "description": "Use private DNS zones to override the DNS resolution for a private endpoint. A private DNS zone links a virtual network to an App Service. Learn more at: https://docs.microsoft.com/azure/app-service/networking/private-endpoint#dns.",
+  "metadata": {
+   "category": "App Service",
+   "createdBy": "7e91f9af-e53a-4869-b8e6-354df1fc645b",
+   "createdOn": "2022-05-19T14:52:03.3478269Z",
+   "updatedBy": null,
+   "updatedOn": null
+  },
+  "parameters": {
+   "privateDnsZoneId": {
+    "type": "String",
+    "metadata": {
+     "displayName": "Private Dns Zone Id",
+     "description": "The private DNS zone to deploy in a new private DNS zone group and link to the private endpoint",
+     "strongType": "Microsoft.Network/privateDnsZones"
+    }
+   },
+   "effect": {
+    "type": "String",
+    "metadata": {
+     "displayName": "Effect",
+     "description": "Enable or disable the execution of the policy"
+    },
+    "allowedValues": [
+     "DeployIfNotExists",
+     "Disabled"
+    ],
+    "defaultValue": "DeployIfNotExists"
+   }
+  },
+  "policyRule": {
+   "if": {
+    "allOf": [
+     {
+      "field": "type",
+      "equals": "Microsoft.Network/privateEndpoints"
+     },
+     {
+      "count": {
+       "field": "Microsoft.Network/privateEndpoints/privateLinkServiceConnections[*]",
+       "where": {
+        "allOf": [
+         {
+          "field": "Microsoft.Network/privateEndpoints/privateLinkServiceConnections[*].privateLinkServiceId",
+          "contains": "Microsoft.Web/sites"
+         },
+         {
+          "field": "Microsoft.Network/privateEndpoints/privateLinkServiceConnections[*].groupIds[*]",
+          "equals": "sites-staging"
+         }
+        ]
+       }
+      },
+      "greaterOrEquals": 1
+     }
+    ]
+   },
+   "then": {
+    "effect": "[parameters('effect')]",
+    "details": {
+     "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+     "roleDefinitionIds": [
+      "/providers/Microsoft.Authorization/roleDefinitions/4d97b98b-1d4f-4787-a291-c67834d212e7"
+     ],
+     "deployment": {
+      "properties": {
+       "mode": "incremental",
+       "template": {
+        "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+        "contentVersion": "1.0.0.0",
+        "parameters": {
+         "privateDnsZoneId": {
+          "type": "string"
+         },
+         "privateEndpointName": {
+          "type": "string"
+         },
+         "location": {
+          "type": "string"
+         }
+        },
+        "resources": [
+         {
+          "name": "[concat(parameters('privateEndpointName'), '/deployedByPolicy')]",
+          "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+          "apiVersion": "2020-03-01",
+          "location": "[parameters('location')]",
+          "properties": {
+           "privateDnsZoneConfigs": [
+            {
+             "name": "websites-privateDnsZone",
+             "properties": {
+              "privateDnsZoneId": "[parameters('privateDnsZoneId')]"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       },
+       "parameters": {
+        "privateDnsZoneId": {
+         "value": "[parameters('privateDnsZoneId')]"
+        },
+        "privateEndpointName": {
+         "value": "[field('name')]"
+        },
+        "location": {
+         "value": "[field('location')]"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "id": "/providers/Microsoft.Management/managementGroups/WizzAirRootManagementGroup/providers/Microsoft.Authorization/policyDefinitions/924b16c7-df7f-4b88-ae40-98fa6f1a7f70",
+ "type": "Microsoft.Authorization/policyDefinitions",
+ "name": "924b16c7-df7f-4b88-ae40-98fa6f1a7f70"
+}
